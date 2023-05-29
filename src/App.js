@@ -4,11 +4,42 @@ import { Calendar, Views, momentLocalizer } from "react-big-calendar";
 import moment from "moment";
 import Button from '@material-ui/core/Button';
 import "react-big-calendar/lib/css/react-big-calendar.css";
+import { makeStyles } from '@material-ui/core/styles';
 
+
+const useStyles = makeStyles((theme) => ({
+  root: {
+    fontFamily: 'Arial, sans-serif',
+    margin: 'auto',
+    maxWidth: '800px',
+    width: '90%', // take up 90% of the viewport width
+    padding: theme.spacing(2),
+    backgroundColor: '#f5f5f5',
+    borderRadius: '5px',
+    [theme.breakpoints.up('md')]: { // apply these styles for screen widths of 960px and above
+      maxWidth: '1200px', // increase maximum width
+      width: '80%', // take up 80% of the viewport width
+    },
+  },
+  calendar: {
+    height: '80vh',
+    marginBottom: theme.spacing(2),
+  },
+  button: {
+    marginRight: theme.spacing(1),
+  },
+  output: {
+    marginTop: theme.spacing(2),
+    padding: theme.spacing(2),
+    backgroundColor: '#ffffff',
+    borderRadius: '5px',
+  },
+}));
 // Setup the localizer by providing the moment object
 const localizer = momentLocalizer(moment);
 
 const App = () => {
+  const classes = useStyles();
   const [events, setEvents] = useState([]);
   const [generatedText, setGeneratedText] = useState("");
 
@@ -65,7 +96,13 @@ const App = () => {
   }
 
   return (
-    <div>
+    <div className={classes.root}>
+      <div>
+        <h1>Schedule2Text</h1>
+        <p>
+          The Schedule2Text App allows you to easily select and generate time ranges for meeting availabilities. Simply click and drag on the interactive calendar to create time slots. Once you have selected your desired time ranges, click the "Generate Text" button to generate a condensed text summary of your meeting availabilities. Use this summary to quickly communicate your availability to others. Get started below!
+        </p>
+      </div>
       <Calendar
         localizer={localizer}
         events={events}
@@ -107,13 +144,13 @@ const App = () => {
           setEvents(removeDuplicates(newEvents));
         }}
 
-
-        style={{ height: '80vh' }}
+        className={classes.calendar}
         defaultView={Views.WEEK}
       />
       <Button
         variant="contained"
         color="primary"
+        className={classes.button}
         onClick={handleGenerateText}
       >
         Generate Text
@@ -121,6 +158,7 @@ const App = () => {
       <Button
         variant="contained"
         color="secondary"
+        className={classes.button}
         onClick={() => {
           setEvents([]);
           setGeneratedText("");
