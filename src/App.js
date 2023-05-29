@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { DateTime } from "luxon";
 import { Calendar, Views, momentLocalizer } from "react-big-calendar";
 import moment from "moment";
@@ -6,6 +6,31 @@ import Button from '@material-ui/core/Button';
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import { makeStyles } from '@material-ui/core/styles';
 
+// add import for useLocation and useNavigate from react-router-dom
+import { useLocation, useNavigate } from 'react-router-dom';
+
+
+// Convert a number to a base-64 string
+function toBase64(num) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+  let base64 = '';
+  while (num > 0) {
+    base64 = chars[num % 64] + base64;
+    num = Math.floor(num / 64);
+  }
+  return base64;
+}
+
+// Convert a base-64 string to a number
+function fromBase64(base64) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+  let num = 0;
+  let len = base64.length;
+  for (let i = 0; i < len; i++) {
+    num = num * 64 + chars.indexOf(base64[i]);
+  }
+  return num;
+}
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -43,6 +68,32 @@ const App = () => {
   const [events, setEvents] = useState([]);
   const [generatedText, setGeneratedText] = useState("");
 
+  // add useNavigate and useLocation hooks
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // convert the query parameters back into the state when the page loads
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const base64EventsParam = params.get('events');
+    if (base64EventsParam) {
+      try {
+        const decodedEvents = fromBase64(decodeURIComponent(base64EventsParam));
+        const simplifiedEvents = JSON.parse(decodedEvents);
+        const convertedEvents = simplifiedEvents.map((event, index) => ({
+          id: index.toString(),
+          title: '',
+          start: DateTime.fromMillis(event.start).toJSDate(),
+          end: DateTime.fromMillis(event.end).toJSDate(),
+          allDay: false,
+        }));
+        setEvents(convertedEvents);
+      } catch (error) {
+        console.error("Failed to parse events from URL", error);
+      }
+    }
+  }, [location.search]);
+
   const handleGenerateText = () => {
     // Sort the events in chronological order
     const sortedEvents = [...events].sort((a, b) => a.start - b.start);
@@ -59,6 +110,39 @@ const App = () => {
     }
     setGeneratedText(textArr.join('\n\n'));
   };
+
+  const handleGenerateLink = () => {
+    const simplifiedEvents = events.map(event => [
+      toBase64(Math.floor(DateTime.fromJSDate(event.start).toMillis() / (30 * 60 * 1000))),
+      toBase64(Math.floor(DateTime.fromJSDate(event.end).toMillis() / (30 * 60 * 1000))),
+    ]);
+    const encodedEvents = simplifiedEvents.map(event => event.join('-')).join(',');
+    navigate(`?events=${encodedEvents}`);
+    const url = `${window.location.origin}${window.location.pathname}?events=${encodedEvents}`;
+    navigator.clipboard.writeText(url);
+    alert('Link copied to clipboard');
+  };
+
+  // In your `useEffect` hook
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const encodedEventsParam = params.get('events');
+    if (encodedEventsParam) {
+      try {
+        const simplifiedEvents = encodedEventsParam.split(',').map(event => event.split('-'));
+        const convertedEvents = simplifiedEvents.map((event, index) => ({
+          id: index.toString(),
+          title: '',
+          start: DateTime.fromMillis(fromBase64(event[0]) * 30 * 60 * 1000).toJSDate(),
+          end: DateTime.fromMillis(fromBase64(event[1]) * 30 * 60 * 1000).toJSDate(),
+          allDay: false,
+        }));
+        setEvents(convertedEvents);
+      } catch (error) {
+        console.error("Failed to parse events from URL", error);
+      }
+    }
+  }, [location.search]);
 
 
   const groupByDay = (events) => {
@@ -169,6 +253,15 @@ const App = () => {
       <div style={{ margin: "20px 0", whiteSpace: "pre-line", backgroundColor: "#f5f5f5", padding: "10px", borderRadius: "5px" }}>
         {generatedText}
       </div>
+
+      <Button
+        variant="contained"
+        color="primary"
+        className={classes.button}
+        onClick={handleGenerateLink}
+      >
+        Copy Link to Clipboard
+      </Button>
     </div>
   );
 };
