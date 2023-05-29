@@ -5,8 +5,6 @@ import moment from "moment";
 import Button from '@material-ui/core/Button';
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import { makeStyles } from '@material-ui/core/styles';
-
-// add import for useLocation and useNavigate from react-router-dom
 import { useLocation, useNavigate } from 'react-router-dom';
 
 
@@ -65,10 +63,11 @@ const localizer = momentLocalizer(moment);
 
 const App = () => {
   const classes = useStyles();
+
   const [events, setEvents] = useState([]);
   const [generatedText, setGeneratedText] = useState("");
+  const [url, setUrl] = useState("");
 
-  // add useNavigate and useLocation hooks
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -94,6 +93,7 @@ const App = () => {
     }
   }, [location.search]);
 
+
   const handleGenerateText = () => {
     // Sort the events in chronological order
     const sortedEvents = [...events].sort((a, b) => a.start - b.start);
@@ -111,17 +111,17 @@ const App = () => {
     setGeneratedText(textArr.join('\n\n'));
   };
 
-  const handleGenerateLink = () => {
+  const handleGenerateLink = async () => {
     const simplifiedEvents = events.map(event => [
       toBase64(Math.floor(DateTime.fromJSDate(event.start).toMillis() / (30 * 60 * 1000))),
       toBase64(Math.floor(DateTime.fromJSDate(event.end).toMillis() / (30 * 60 * 1000))),
     ]);
     const encodedEvents = simplifiedEvents.map(event => event.join('-')).join(',');
     navigate(`?events=${encodedEvents}`);
-    const url = `${window.location.origin}${window.location.pathname}?events=${encodedEvents}`;
-    navigator.clipboard.writeText(url);
-    alert('Link copied to clipboard');
+    const newUrl = `${window.location.origin}${window.location.pathname}?events=${encodedEvents}`;
+    setUrl(newUrl);
   };
+
 
   // In your `useEffect` hook
   useEffect(() => {
@@ -260,8 +260,12 @@ const App = () => {
         className={classes.button}
         onClick={handleGenerateLink}
       >
-        Copy Link to Clipboard
+        Generate Link
       </Button>
+      <div className={classes.output}>
+        Generated URL: <br />
+        {url && <a href={url}>{url}</a>}
+      </div>
     </div>
   );
 };
